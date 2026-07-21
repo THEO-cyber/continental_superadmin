@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Superadmin — Continental Auto Parts</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0e1726">
+  <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <!-- ======== login ======== -->
+  <section id="login-screen" class="login-screen" hidden>
+    <form id="login-form" class="login-card">
+      <img src="/assets/icons/favicon.svg" alt="" width="52" height="52">
+      <h1>Continental <span>Superadmin</span></h1>
+      <label>Username
+        <input name="username" autocomplete="username" required>
+      </label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+      <p id="login-error" class="form-error" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <!-- ======== app ======== -->
+  <div id="app" class="app" hidden>
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <img src="/assets/icons/favicon.svg" alt="" width="34" height="34">
+        <div><strong>Continental</strong><span>Superadmin</span></div>
+      </div>
+      <nav class="sidebar-nav" id="nav">
+        <button data-view="dashboard" class="active">📊 Dashboard</button>
+        <button data-view="products">📦 Products</button>
+        <button data-view="pending">🔔 Pending <span class="nav-badge" id="pending-badge" hidden>0</span></button>
+        <button data-view="outofstock">⚠️ Out of Stock</button>
+        <button data-view="sales">💰 Sales</button>
+        <button data-view="reports">📈 Reports</button>
+        <button data-view="receipts">🧾 Receipts</button>
+        <button data-view="workers">👷 Workers</button>
+        <button data-view="branches">🏢 Branches</button>
+        <button data-view="categories">🏷️ Categories</button>
+        <button data-view="settings">⚙️ Settings</button>
+      </nav>
+      <div class="sidebar-foot">
+        <a href="/" target="_blank" rel="noopener">↗ View client site</a>
+        <button id="logout-btn">Sign out</button>
+      </div>
+    </aside>
+    <main class="main" id="view" aria-live="polite"></main>
+  </div>
+
+  <!-- ======== modal + toast ======== -->
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
