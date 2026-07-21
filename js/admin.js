@@ -620,7 +620,7 @@
           if (action === "add") return openProductModal(null, branches);
           var row = btn.closest("tr[data-id]");
           if (!row) return;
-          var id = Number(row.getAttribute("data-id"));
+          var id = row.getAttribute("data-id");
           var product = products.find(function (p) {
             return p.id === id;
           });
@@ -1142,7 +1142,7 @@
           var btn = e.target.closest("[data-action]");
           if (!btn) return;
           var row = btn.closest("tr[data-id]");
-          var id = Number(row.getAttribute("data-id"));
+          var id = row.getAttribute("data-id");
           var worker = workers.find(function (w) {
             return w.id === id;
           });
@@ -1469,7 +1469,7 @@
     $("#view").innerHTML = html;
 
     $("#rep-worker").addEventListener("change", function (e) {
-      reportsState.workerId = Number(e.target.value);
+      reportsState.workerId = e.target.value;
       loadWorkerReport(workers);
     });
     $("#view")
@@ -1773,7 +1773,7 @@
               if (!name || !qty) return;
               var item = { quantity: qty, unit_price: price };
               if (row.dataset.productId)
-                item.product_id = Number(row.dataset.productId);
+                item.product_id = row.dataset.productId;
               else item.product_name = name;
               items.push(item);
             });
@@ -1996,7 +1996,7 @@
         $("#view").onclick = function (e) {
           var btn = e.target.closest("[data-restock]");
           if (!btn) return;
-          var id = Number(btn.getAttribute("data-restock"));
+          var id = btn.getAttribute("data-restock");
           var product = out.concat(low).find(function (p) {
             return p.id === id;
           });
