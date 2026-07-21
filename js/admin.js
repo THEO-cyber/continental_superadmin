@@ -136,6 +136,19 @@
       });
   }
 
+  // Swaps a button's contents for a spinner + label while an async action is
+  // in flight (fetching + blob-ifying a PDF isn't instant), then restores it
+  // — so tapping View/Download doesn't look like nothing happened.
+  function withSpinner(btn, label, task) {
+    var original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="btn-spinner"></span>' + label;
+    return task().finally(function () {
+      btn.disabled = false;
+      btn.innerHTML = original;
+    });
+  }
+
   function api(path, opts) {
     opts = opts || {};
     var headers = opts.form ? {} : { "Content-Type": "application/json" };
@@ -314,6 +327,7 @@
     }
     $("#view").innerHTML = '<p class="view-sub">Loading…</p>';
     views[name]();
+    window.scrollTo(0, 0);
   }
 
   // ================= DASHBOARD =================
@@ -1590,11 +1604,13 @@
           .querySelectorAll("[data-view-pdf]")
           .forEach(function (btn) {
             btn.addEventListener("click", function () {
-              viewFile(
-                "/api/admin/receipts/" +
-                  btn.getAttribute("data-view-pdf") +
-                  "/pdf",
-              ).catch(function (err) {
+              withSpinner(btn, "Opening…", function () {
+                return viewFile(
+                  "/api/admin/receipts/" +
+                    btn.getAttribute("data-view-pdf") +
+                    "/pdf",
+                );
+              }).catch(function (err) {
                 toast(err.message, true);
               });
             });
@@ -1603,11 +1619,13 @@
           .querySelectorAll("[data-dl-pdf]")
           .forEach(function (btn) {
             btn.addEventListener("click", function () {
-              downloadFile(
-                "/api/admin/receipts/" +
-                  btn.getAttribute("data-dl-pdf") +
-                  "/pdf?download=1",
-              ).catch(function (err) {
+              withSpinner(btn, "Downloading…", function () {
+                return downloadFile(
+                  "/api/admin/receipts/" +
+                    btn.getAttribute("data-dl-pdf") +
+                    "/pdf?download=1",
+                );
+              }).catch(function (err) {
                 toast(err.message, true);
               });
             });

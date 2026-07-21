@@ -206,6 +206,15 @@ fieldset.lang-set legend { font-size: .8rem; font-weight: 800; color: var(--navy
 }
 .feed-item.new { animation: pop .5s ease; border-color: var(--amber); }
 @keyframes pop { from { background: #fff7e8; } }
+
+/* ---------- inline button spinner (async actions: view/download PDFs, etc.) ---------- */
+.btn-spinner {
+  display: inline-block; width: .85em; height: .85em; margin-right: .4em;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  vertical-align: -.15em; animation: btn-spin .6s linear infinite; opacity: .8;
+}
+@keyframes btn-spin { to { transform: rotate(360deg); } }
+.btn[disabled] { opacity: .7; cursor: default; pointer-events: none; }
 .feed-main { flex: 1; min-width: 0; }
 .feed-title { font-weight: 700; color: var(--navy); font-size: .92rem; }
 .feed-sub { color: var(--muted); font-size: .8rem; }
