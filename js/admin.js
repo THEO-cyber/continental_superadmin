@@ -149,7 +149,9 @@
           ? JSON.stringify(opts.body)
           : undefined,
     }).then(function (res) {
-      if (res.status === 401) {
+      // A 401 from the login endpoint itself just means wrong credentials —
+      // only treat 401 elsewhere as an expired session and force re-login.
+      if (res.status === 401 && path !== "/api/auth/login") {
         logout();
         throw new Error("Session expired — sign in again");
       }
