@@ -275,10 +275,32 @@
     }, 350);
   }
 
+  // ---------- mobile drawer ----------
+  var appEl = $("#app");
+  var menuToggle = $("#menu-toggle");
+  function openDrawer() {
+    appEl.classList.add("sidebar-open");
+    menuToggle.setAttribute("aria-expanded", "true");
+    document.body.style.overflow = "hidden";
+  }
+  function closeDrawer() {
+    appEl.classList.remove("sidebar-open");
+    menuToggle.setAttribute("aria-expanded", "false");
+    document.body.style.overflow = "";
+  }
+  menuToggle.addEventListener("click", function () {
+    if (appEl.classList.contains("sidebar-open")) closeDrawer();
+    else openDrawer();
+  });
+  $("#sidebar-backdrop").addEventListener("click", closeDrawer);
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") closeDrawer();
+  });
+
   // ---------- navigation ----------
   $("#nav").addEventListener("click", function (e) {
     var btn = e.target.closest("button[data-view]");
-    if (btn) showView(btn.getAttribute("data-view"));
+    if (btn) { showView(btn.getAttribute("data-view")); closeDrawer(); }
   });
 
   function showView(name) {

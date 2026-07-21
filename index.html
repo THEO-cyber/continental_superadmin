@@ -29,7 +29,15 @@
 
   <!-- ======== app ======== -->
   <div id="app" class="app" hidden>
-    <aside class="sidebar">
+    <header class="mobile-topbar">
+      <button id="menu-toggle" class="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">☰</button>
+      <div class="mobile-topbar-brand">
+        <img src="/assets/icons/favicon.svg" alt="" width="26" height="26">
+        <span><strong>Continental</strong> Superadmin</span>
+      </div>
+    </header>
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <img src="/assets/icons/favicon.svg" alt="" width="34" height="34">
         <div><strong>Continental</strong><span>Superadmin</span></div>
