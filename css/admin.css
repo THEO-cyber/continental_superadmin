@@ -293,4 +293,7 @@ fieldset.lang-set legend { font-size: .8rem; font-weight: 800; color: var(--navy
   .receipt-item-row { grid-template-columns: 1fr; gap: .35rem; background: var(--bg); padding: .7rem; border-radius: 8px; margin-bottom: .7rem; }
   .ri-total { text-align: left; }
   .date-nav { flex-wrap: wrap; justify-content: center; }
+  /* One field per row, like the Change password section below it — auto-fit's
+     2-column grid can still fit two cramped columns on some mid-size phones. */
+  .form-row { grid-template-columns: 1fr; }
 }

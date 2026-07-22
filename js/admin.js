@@ -412,6 +412,7 @@
                 .join("")
             : '<p class="cell-muted">Sales appear here in real time as workers record them.</p>') +
           "</div></div>";
+        if (currentView !== "dashboard") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
         $("#view")
           .querySelectorAll("[data-goto]")
@@ -575,6 +576,7 @@
               (branches.length > 1 ? 8 : 7) +
               '" class="table-empty">No products yet — click “Add product”.</td></tr>') +
           "</tbody></table></div></div>";
+        if (currentView !== "products") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#p-search").addEventListener("input", function (e) {
@@ -1055,6 +1057,7 @@
           '<label class="cell-muted" style="font-size:.82rem">To <input id="export-to" type="date" style="width:auto"></label>' +
           '<button class="btn btn-dark btn-xs" id="export-ledger">⬇ Export CSV</button>' +
           "</div></div>";
+        if (currentView !== "sales") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#sales-date").addEventListener("change", function (e) {
@@ -1149,6 +1152,7 @@
                 .join("")
             : '<tr><td colspan="6" class="table-empty">No workers yet — add your first worker account.</td></tr>') +
           "</tbody></table></div></div>";
+        if (currentView !== "workers") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#add-worker").addEventListener("click", openWorkerModal);
@@ -1480,6 +1484,7 @@
             .join("")
         : '<tr><td colspan="6" class="table-empty">No transactions in this period.</td></tr>') +
       "</tbody></table></div></div>";
+    if (currentView !== "reports") return; // user navigated away while this was loading
     $("#view").innerHTML = html;
 
     $("#rep-worker").addEventListener("change", function (e) {
@@ -1584,6 +1589,7 @@
                 .join("")
             : '<tr><td colspan="6" class="table-empty">No receipts yet create the first one.</td></tr>') +
           "</tbody></table></div></div>";
+        if (currentView !== "receipts") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#new-receipt").addEventListener("click", openReceiptModal);
@@ -1904,6 +1910,7 @@
                 })
                 .join("")
             : '<div class="panel"><p class="cell-muted">No submissions waiting you\'re all caught up.</p></div>');
+        if (currentView !== "pending") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#view").onclick = function (e) {
@@ -2009,6 +2016,7 @@
                 .join("")
             : '<tr><td colspan="5" class="table-empty">Nothing low on stock.</td></tr>') +
           "</tbody></table></div></div>";
+        if (currentView !== "outofstock") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#view").onclick = function (e) {
@@ -2091,6 +2099,7 @@
                 .join("")
             : '<tr><td colspan="7" class="table-empty">No branches yet.</td></tr>') +
           "</tbody></table></div>";
+        if (currentView !== "branches") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#new-branch").addEventListener("click", function () {
@@ -2182,6 +2191,7 @@
                 .join("")
             : '<tr><td colspan="5" class="table-empty">No categories yet.</td></tr>') +
           "</tbody></table></div></div>";
+        if (currentView !== "categories") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#new-category").addEventListener("click", function () {
@@ -2279,6 +2289,7 @@
           '<div class="modal-actions" style="justify-content:flex-start">' +
           '<button type="submit" class="btn btn-dark">Change password</button></div>' +
           "</form></div>";
+        if (currentView !== "settings") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
 
         $("#settings-form").addEventListener("submit", function (e) {
