@@ -4,6 +4,9 @@
 
   var TOKEN_KEY = "continental_admin_token";
   var token = localStorage.getItem(TOKEN_KEY);
+  // Set in index.html — points at the backend when this app is hosted
+  // separately; empty string falls back to same-origin (local/monorepo dev).
+  var API_BASE = (typeof window !== "undefined" && window.API_BASE) || "";
   var socket = null;
   var currentView = "dashboard";
   var refreshTimer = null;
@@ -76,7 +79,7 @@
   }
 
   function downloadFile(url) {
-    return fetch(url, { headers: { Authorization: "Bearer " + token } })
+    return fetch(API_BASE + url, { headers: { Authorization: "Bearer " + token } })
       .then(function (res) {
         if (!res.ok)
           return res
@@ -114,7 +117,7 @@
   // blob: URL instead (blob URLs are same-origin views of the raw bytes —
   // the resource's original Content-Disposition header no longer applies).
   function viewFile(url) {
-    return fetch(url, { headers: { Authorization: "Bearer " + token } })
+    return fetch(API_BASE + url, { headers: { Authorization: "Bearer " + token } })
       .then(function (res) {
         if (!res.ok)
           return res
@@ -153,7 +156,7 @@
     opts = opts || {};
     var headers = opts.form ? {} : { "Content-Type": "application/json" };
     if (token) headers.Authorization = "Bearer " + token;
-    return fetch(path, {
+    return fetch(API_BASE + path, {
       method: opts.method || "GET",
       headers: headers,
       body: opts.form
@@ -166,7 +169,7 @@
       // only treat 401 elsewhere as an expired session and force re-login.
       if (res.status === 401 && path !== "/api/auth/login") {
         logout();
-        throw new Error("Session expired — sign in again");
+        throw new Error("Session expired sign in again");
       }
       return res
         .json()
@@ -249,7 +252,9 @@
 
   function connectSocket() {
     if (socket) socket.disconnect();
-    socket = io({ auth: { token: token } });
+    socket = API_BASE
+      ? io(API_BASE, { auth: { token: token } })
+      : io({ auth: { token: token } });
     socket.on("sale:recorded", function (sale) {
       toast(
         "💰 " +
@@ -574,7 +579,7 @@
                 .join("")
             : '<tr><td colspan="' +
               (branches.length > 1 ? 8 : 7) +
-              '" class="table-empty">No products yet — click “Add product”.</td></tr>') +
+              '" class="table-empty">No products yet, click “Add product”.</td></tr>') +
           "</tbody></table></div></div>";
         if (currentView !== "products") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
@@ -603,7 +608,7 @@
               "This removes every product in the catalog (" +
               products.length +
               " shown by the current filters, but this deletes the ENTIRE catalog regardless of filters — " +
-              "every product, every category, every branch). Products with sales history are archived instead of deleted, so reports stay intact. This cannot be undone for the rest.",
+              "every product, every category, every branch), including their photos on Cloudinary. This cannot be undone.",
             confirmWord: "DELETE ALL",
             onConfirm: function () {
               return api("/api/admin/products", { method: "DELETE" });
@@ -616,7 +621,7 @@
             openDeleteConfirmModal({
               title: 'Delete all in "' + catName + '"?',
               warning:
-                "This removes every product in this category. Products with sales history are archived instead of deleted, so reports stay intact. This cannot be undone for the rest.",
+                "This removes every product in this category, including their photos on Cloudinary. This cannot be undone.",
               confirmWord: "DELETE",
               onConfirm: function () {
                 return api(
@@ -743,13 +748,13 @@
         '<div class="form-row">' +
         '<label>Price (FCFA) *<input name="price" type="number" min="0" step="1" required value="' +
         (product ? product.price : "") +
-        '"><span class="form-hint">Only visible to you and workers — never on the client site.</span></label>' +
-        '<label>Quantity in stock *<input name="quantity" type="number" min="0" step="1" required value="' +
+        '"><span class="form-hint">Only visible to you and workers. never on the client site.</span></label>' +
+        '<label>Quantity in stock<input name="quantity" type="number" min="0" step="1" required value="' +
         (product ? product.quantity : 0) +
         '"></label>' +
         "</div>" +
         '<div class="form-row">' +
-        '<label>Photo<input name="image" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">JPG, PNG or WebP — max 5 MB.</span></label>' +
+        '<label>Photo<input name="image" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">JPG, PNG or WebP formats. max 5 MB.</span></label>' +
         '<div class="form-col"><span>Preview</span><img class="img-preview" id="img-preview" src="' +
         esc((product && product.image) || "/assets/img/part-placeholder.svg") +
         '" alt=""></div>' +
@@ -809,8 +814,8 @@
           closeModal();
           toast(
             isEdit
-              ? "Product updated — client site refreshed instantly"
-              : "Product added — now live on the client site",
+              ? "Product updated client site refreshed instantly"
+              : "Product added now live on the client site",
           );
           renderProducts();
         })
@@ -859,15 +864,7 @@
         .onConfirm()
         .then(function (res) {
           closeModal();
-          var msg =
-            "Deleted " +
-            (res.deleted || 0) +
-            " product(s)" +
-            (res.archived
-              ? ", archived " + res.archived + " (had sales history)"
-              : "") +
-            ".";
-          toast(msg);
+          toast("Deleted " + (res.deleted || 0) + " product(s).");
           renderProducts();
         })
         .catch(function (err) {
@@ -881,7 +878,7 @@
 
   function openRestockModal(product, onDone) {
     var modal = openModal(
-      "<h2>Restock — " +
+      "<h2>Restock product " +
         esc(product.name_en) +
         "</h2>" +
         '<form id="restock-form" class="form-grid">' +
@@ -914,19 +911,15 @@
   function deleteProduct(product) {
     if (
       !confirm(
-        'Remove "' +
+        'Delete "' +
           product.name_en +
-          '" from the catalog?\nIt disappears from the client site instantly.',
+          '" permanently? This removes it from the database and Cloudinary, and cannot be undone.',
       )
     )
       return;
     api("/api/admin/products/" + product.id, { method: "DELETE" })
-      .then(function (res) {
-        toast(
-          res.archived
-            ? "Product had sales history — it was hidden and zeroed instead of deleted"
-            : "Product deleted",
-        );
+      .then(function () {
+        toast("Product deleted");
         renderProducts();
       })
       .catch(function (err) {
@@ -1185,7 +1178,7 @@
               .then(function (res2) {
                 toast(
                   res2.archived
-                    ? "Worker had sales history — account was deactivated instead"
+                    ? "Worker had sales history account was deactivated instead"
                     : "Worker deleted",
                 );
                 renderWorkers();
@@ -1205,7 +1198,7 @@
         '<form id="worker-form" class="form-grid">' +
         '<label>Full name<input name="name" required></label>' +
         '<label>Username<input name="username" required pattern="[a-zA-Z0-9_.\\-]{3,30}"><span class="form-hint">3–30 characters, letters/numbers/._- only</span></label>' +
-        '<label>Password<input name="password" type="text" required minlength="8"><span class="form-hint">At least 8 characters — share it with the worker.</span></label>' +
+        '<label>Password<input name="password" type="text" required minlength="8"><span class="form-hint">At least 8 characters share it with the worker.</span></label>' +
         '<p class="form-error" id="worker-error" hidden></p>' +
         '<div class="modal-actions">' +
         '<button type="button" class="btn btn-outline" id="cancel-worker">Cancel</button>' +
@@ -1238,7 +1231,7 @@
 
   function openPasswordReset(worker) {
     var modal = openModal(
-      "<h2>Reset password — " +
+      "<h2>Reset password " +
         esc(worker.name) +
         "</h2>" +
         '<form id="pw-form" class="form-grid">' +
@@ -1302,7 +1295,7 @@
         if (!workers.length) {
           $("#view").innerHTML =
             '<div class="view-head"><h1>Reports</h1></div>' +
-            '<div class="panel"><p class="cell-muted">Add a worker first — reports appear per worker once they have sales.</p></div>';
+            '<div class="panel"><p class="cell-muted">Add a worker first to see reports appear per worker once they have sales.</p></div>';
           return;
         }
         if (
@@ -2288,6 +2281,13 @@
           '<label>New password<input name="next" type="password" required minlength="8" autocomplete="new-password"></label>' +
           '<div class="modal-actions" style="justify-content:flex-start">' +
           '<button type="submit" class="btn btn-dark">Change password</button></div>' +
+          "</form></div>" +
+          '<div class="panel"><h2>Change my username</h2>' +
+          '<form id="username-form" class="form-grid" style="max-width:420px">' +
+          '<label>New username<input name="username" required minlength="3" maxlength="30" pattern="[a-zA-Z0-9_.-]+" autocomplete="username"><span class="form-hint">Letters, numbers, ._- only. You\'ll use this the next time you sign in.</span></label>' +
+          '<label>Current password<input name="password" type="password" required autocomplete="current-password"></label>' +
+          '<div class="modal-actions" style="justify-content:flex-start">' +
+          '<button type="submit" class="btn btn-dark">Change username</button></div>' +
           "</form></div>";
         if (currentView !== "settings") return; // user navigated away while this was loading
         $("#view").innerHTML = html;
@@ -2324,6 +2324,22 @@
             .then(function () {
               f.reset();
               toast("Password changed");
+            })
+            .catch(function (err) {
+              toast(err.message, true);
+            });
+        });
+
+        $("#username-form").addEventListener("submit", function (e) {
+          e.preventDefault();
+          var f = e.target;
+          api("/api/auth/change-username", {
+            method: "POST",
+            body: { username: f.username.value, password: f.password.value },
+          })
+            .then(function (res) {
+              f.reset();
+              toast('Username changed to "' + res.username + '" — use it next time you sign in');
             })
             .catch(function (err) {
               toast(err.message, true);
