@@ -1173,14 +1173,17 @@
           }
           if (action === "password") openPasswordReset(worker);
           if (action === "remove") {
-            if (!confirm('Delete worker "' + worker.name + '"?')) return;
+            if (
+              !confirm(
+                'Delete worker "' +
+                  worker.name +
+                  '" permanently? Their sales history is kept for reporting but will show as "(deleted worker)". This cannot be undone.',
+              )
+            )
+              return;
             api("/api/admin/workers/" + id, { method: "DELETE" })
-              .then(function (res2) {
-                toast(
-                  res2.archived
-                    ? "Worker had sales history account was deactivated instead"
-                    : "Worker deleted",
-                );
+              .then(function () {
+                toast("Worker deleted");
                 renderWorkers();
               })
               .catch(function (err) {
