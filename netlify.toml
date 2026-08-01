@@ -1,0 +1,9 @@
+# Static site (repo root is the publish dir) + one tiny Netlify Function
+# that serves runtime config (API_BASE, CLIENT_SITE_URL) from environment
+# variables, so those URLs never need to be hardcoded in index.html.
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"

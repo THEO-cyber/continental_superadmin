@@ -9,11 +9,11 @@
   <link rel="icon" href="/assets/icons/favicon.svg" type="image/svg+xml">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="css/admin.css">
-  <script>
-    // This app is hosted separately from the API/realtime server — update
-    // this if the backend's URL ever changes (custom domain, etc.).
-    window.API_BASE = "https://continental-backend-yieu.onrender.com";
-  </script>
+  <!-- This app is hosted separately from the API/realtime server. The
+       backend URL lives in this site's Netlify env vars (API_BASE,
+       CLIENT_SITE_URL), served at runtime by netlify/functions/config.ts —
+       never hardcoded here. -->
+  <script src="/config.js"></script>
 </head>
 <body>
   <!-- ======== login ======== -->
@@ -61,7 +61,7 @@
         <button data-view="settings">⚙️ Settings</button>
       </nav>
       <div class="sidebar-foot">
-        <a href="https://continental-backend-yieu.onrender.com/" target="_blank" rel="noopener">↗ View client site</a>
+        <a id="client-site-link" href="#" target="_blank" rel="noopener">↗ View client site</a>
         <button id="logout-btn">Sign out</button>
       </div>
     </aside>
@@ -72,7 +72,14 @@
   <div id="modal-root"></div>
   <div id="toast" class="toast" role="status"></div>
 
-  <script src="https://continental-backend-yieu.onrender.com/socket.io/socket.io.js"></script>
+  <!-- Loaded from Socket.IO's own CDN rather than the backend, since the
+       library itself isn't tied to which server it'll connect to — the
+       actual connection target (window.API_BASE) is set dynamically. -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script>
+    var clientLink = document.getElementById('client-site-link');
+    if (clientLink && window.CLIENT_SITE_URL) clientLink.href = window.CLIENT_SITE_URL;
+  </script>
   <script src="js/admin.js"></script>
 </body>
 </html>
