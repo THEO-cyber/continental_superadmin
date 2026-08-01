@@ -117,6 +117,12 @@
   // blob: URL instead (blob URLs are same-origin views of the raw bytes —
   // the resource's original Content-Disposition header no longer applies).
   function viewFile(url) {
+    // Open the tab synchronously, in the same call stack as the click that
+    // triggered this — most browsers block window.open() called after an
+    // async fetch resolves (the user-gesture context is gone by then),
+    // which is why "View" used to silently do nothing. Navigate this
+    // already-open tab once the blob is ready instead of opening a new one.
+    var win = window.open("", "_blank");
     return fetch(API_BASE + url, { headers: { Authorization: "Bearer " + token } })
       .then(function (res) {
         if (!res.ok)
@@ -132,10 +138,15 @@
       })
       .then(function (blob) {
         var objUrl = URL.createObjectURL(blob);
-        window.open(objUrl, "_blank");
+        if (win) win.location.href = objUrl;
+        else window.open(objUrl, "_blank");
         setTimeout(function () {
           URL.revokeObjectURL(objUrl);
         }, 60000);
+      })
+      .catch(function (err) {
+        if (win) win.close();
+        throw err;
       });
   }
 
@@ -1579,6 +1590,9 @@
                     '<button class="btn btn-outline btn-xs" data-dl-pdf="' +
                     r.id +
                     '">⬇ Download</button>' +
+                    '<button class="btn btn-danger btn-xs" data-del-receipt="' +
+                    r.id +
+                    '">🗑 Delete</button>' +
                     "</div></td></tr>"
                   );
                 })
@@ -1626,6 +1640,33 @@
                   "/api/admin/receipts/" +
                     btn.getAttribute("data-dl-pdf") +
                     "/pdf?download=1",
+                );
+              }).catch(function (err) {
+                toast(err.message, true);
+              });
+            });
+          });
+        $("#view")
+          .querySelectorAll("[data-del-receipt]")
+          .forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              var id = btn.getAttribute("data-del-receipt");
+              var row = btn.closest("tr");
+              var receiptNo = row ? row.querySelector(".cell-strong").textContent : "";
+              if (
+                !confirm(
+                  'Delete receipt "' +
+                    receiptNo +
+                    '" permanently? This cannot be undone.',
+                )
+              )
+                return;
+              withSpinner(btn, "Deleting…", function () {
+                return api("/api/admin/receipts/" + id, { method: "DELETE" }).then(
+                  function () {
+                    toast("Receipt deleted");
+                    renderReceipts();
+                  },
                 );
               }).catch(function (err) {
                 toast(err.message, true);
