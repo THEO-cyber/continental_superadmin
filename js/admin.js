@@ -163,6 +163,43 @@
     });
   }
 
+  // Downscales + re-compresses a photo in the browser before it ever hits
+  // the network — a full-res phone photo (often 3-8MB) is far more data
+  // than a product-catalog image needs, and every byte crosses two hops
+  // (browser -> backend -> Cloudinary). PNG stays PNG (lossless — only
+  // dimension downscaling helps there); everything else becomes JPEG.
+  function compressImage(file, maxDim, quality) {
+    if (!/^image\//.test(file.type)) return Promise.resolve(file);
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        var w = Math.round(img.width * scale) || 1;
+        var h = Math.round(img.height * scale) || 1;
+        var canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        var outType = file.type === "image/png" ? "image/png" : "image/jpeg";
+        canvas.toBlob(
+          function (blob) {
+            resolve(blob || file); // if the browser can't encode it, fall back to the original
+          },
+          outType,
+          outType === "image/jpeg" ? quality : undefined,
+        );
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve(file); // unreadable as an <img> (e.g. corrupt) — let the server's own validation reject it
+      };
+      img.src = url;
+    });
+  }
+
   function api(path, opts) {
     opts = opts || {};
     var headers = opts.form ? {} : { "Content-Type": "application/json" };
@@ -700,7 +737,7 @@
       "></label>" +
       '<label>Description<textarea name="desc_' +
       prefix +
-      '">' +
+      '" maxlength="4000">' +
       esc(p["desc_" + prefix] || "") +
       "</textarea></label>" +
       "</fieldset>"
@@ -796,34 +833,39 @@
     $("#product-form", modal).addEventListener("submit", function (e) {
       e.preventDefault();
       var f = e.target;
-      var form = new FormData();
-      [
-        "name_en",
-        "name_fr",
-        "name_zh",
-        "desc_en",
-        "desc_fr",
-        "desc_zh",
-        "category",
-        "brand",
-        "sku",
-      ].forEach(function (k) {
-        form.append(k, f[k].value);
-      });
-      form.append("price", f.price.value);
-      form.append("quantity", f.quantity.value);
-      form.append("published", f.published.checked ? "1" : "0");
-      if (f.branch_id) form.append("branch_id", f.branch_id.value);
-      if (fileInput.files[0]) form.append("image", fileInput.files[0]);
-
       var submitBtn = f.querySelector('button[type="submit"]');
       withSpinner(submitBtn, isEdit ? "Saving…" : "Adding…", function () {
-        return isEdit
-          ? api("/api/admin/products/" + product.id, {
-              method: "PUT",
-              form: form,
-            })
-          : api("/api/admin/products", { method: "POST", form: form });
+        return Promise.resolve(
+          fileInput.files[0]
+            ? compressImage(fileInput.files[0], 1600, 0.82)
+            : null,
+        ).then(function (image) {
+          var form = new FormData();
+          [
+            "name_en",
+            "name_fr",
+            "name_zh",
+            "desc_en",
+            "desc_fr",
+            "desc_zh",
+            "category",
+            "brand",
+            "sku",
+          ].forEach(function (k) {
+            form.append(k, f[k].value);
+          });
+          form.append("price", f.price.value);
+          form.append("quantity", f.quantity.value);
+          form.append("published", f.published.checked ? "1" : "0");
+          if (f.branch_id) form.append("branch_id", f.branch_id.value);
+          if (image) form.append("image", image, fileInput.files[0].name);
+          return isEdit
+            ? api("/api/admin/products/" + product.id, {
+                method: "PUT",
+                form: form,
+              })
+            : api("/api/admin/products", { method: "POST", form: form });
+        });
       })
         .then(function () {
           closeModal();
