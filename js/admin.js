@@ -232,9 +232,11 @@
     var f = e.target;
     var errEl = $("#login-error");
     errEl.hidden = true;
-    api("/api/auth/login", {
-      method: "POST",
-      body: { username: f.username.value, password: f.password.value },
+    withSpinner(f.querySelector('button[type="submit"]'), "Signing in…", function () {
+      return api("/api/auth/login", {
+        method: "POST",
+        body: { username: f.username.value, password: f.password.value },
+      });
     })
       .then(function (data) {
         if (data.user.role !== "superadmin")
@@ -658,7 +660,7 @@
           });
           if (action === "edit") openProductModal(product, branches);
           if (action === "restock") openRestockModal(product);
-          if (action === "delete") deleteProduct(product);
+          if (action === "delete") deleteProduct(product, btn);
           if (action === "publish") {
             api("/api/admin/products/" + id, {
               method: "PUT",
@@ -814,13 +816,15 @@
       if (f.branch_id) form.append("branch_id", f.branch_id.value);
       if (fileInput.files[0]) form.append("image", fileInput.files[0]);
 
-      var req = isEdit
-        ? api("/api/admin/products/" + product.id, {
-            method: "PUT",
-            form: form,
-          })
-        : api("/api/admin/products", { method: "POST", form: form });
-      req
+      var submitBtn = f.querySelector('button[type="submit"]');
+      withSpinner(submitBtn, isEdit ? "Saving…" : "Adding…", function () {
+        return isEdit
+          ? api("/api/admin/products/" + product.id, {
+              method: "PUT",
+              form: form,
+            })
+          : api("/api/admin/products", { method: "POST", form: form });
+      })
         .then(function () {
           closeModal();
           toast(
@@ -870,9 +874,9 @@
       e.preventDefault();
       if (input.value.trim().toUpperCase() !== opts.confirmWord.toUpperCase())
         return;
-      submitBtn.disabled = true;
-      opts
-        .onConfirm()
+      withSpinner(submitBtn, "Deleting…", function () {
+        return opts.onConfirm();
+      })
         .then(function (res) {
           closeModal();
           toast("Deleted " + (res.deleted || 0) + " product(s).");
@@ -882,7 +886,6 @@
           var el = $("#confirm-error", modal);
           el.textContent = err.message;
           el.hidden = false;
-          submitBtn.disabled = false;
         });
     });
   }
@@ -904,9 +907,12 @@
     $("#cancel-restock", modal).addEventListener("click", closeModal);
     $("#restock-form", modal).addEventListener("submit", function (e) {
       e.preventDefault();
-      api("/api/admin/products/" + product.id + "/stock", {
-        method: "PATCH",
-        body: { delta: Number(e.target.delta.value) },
+      var f = e.target;
+      withSpinner(f.querySelector('button[type="submit"]'), "Adding…", function () {
+        return api("/api/admin/products/" + product.id + "/stock", {
+          method: "PATCH",
+          body: { delta: Number(f.delta.value) },
+        });
       })
         .then(function (res) {
           closeModal();
@@ -919,7 +925,7 @@
     });
   }
 
-  function deleteProduct(product) {
+  function deleteProduct(product, btn) {
     if (
       !confirm(
         'Delete "' +
@@ -928,7 +934,9 @@
       )
     )
       return;
-    api("/api/admin/products/" + product.id, { method: "DELETE" })
+    withSpinner(btn, "Deleting…", function () {
+      return api("/api/admin/products/" + product.id, { method: "DELETE" });
+    })
       .then(function () {
         toast("Product deleted");
         renderProducts();
@@ -1089,8 +1097,10 @@
               )
             )
               return;
-            api("/api/sales/" + del.getAttribute("data-del-sale"), {
-              method: "DELETE",
+            withSpinner(del, "Deleting…", function () {
+              return api("/api/sales/" + del.getAttribute("data-del-sale"), {
+                method: "DELETE",
+              });
             })
               .then(function () {
                 toast("Sale deleted — stock restored");
@@ -1170,9 +1180,11 @@
           });
           var action = btn.getAttribute("data-action");
           if (action === "toggle") {
-            api("/api/admin/workers/" + id, {
-              method: "PATCH",
-              body: { active: worker.active ? 0 : 1 },
+            withSpinner(btn, "…", function () {
+              return api("/api/admin/workers/" + id, {
+                method: "PATCH",
+                body: { active: worker.active ? 0 : 1 },
+              });
             })
               .then(function () {
                 toast(worker.active ? "Worker disabled" : "Worker enabled");
@@ -1192,7 +1204,9 @@
               )
             )
               return;
-            api("/api/admin/workers/" + id, { method: "DELETE" })
+            withSpinner(btn, "Deleting…", function () {
+              return api("/api/admin/workers/" + id, { method: "DELETE" });
+            })
               .then(function () {
                 toast("Worker deleted");
                 renderWorkers();
@@ -1222,13 +1236,15 @@
     $("#worker-form", modal).addEventListener("submit", function (e) {
       e.preventDefault();
       var f = e.target;
-      api("/api/admin/workers", {
-        method: "POST",
-        body: {
-          name: f.name.value,
-          username: f.username.value,
-          password: f.password.value,
-        },
+      withSpinner(f.querySelector('button[type="submit"]'), "Creating…", function () {
+        return api("/api/admin/workers", {
+          method: "POST",
+          body: {
+            name: f.name.value,
+            username: f.username.value,
+            password: f.password.value,
+          },
+        });
       })
         .then(function () {
           closeModal();
@@ -1257,9 +1273,12 @@
     $("#cancel-pw", modal).addEventListener("click", closeModal);
     $("#pw-form", modal).addEventListener("submit", function (e) {
       e.preventDefault();
-      api("/api/admin/workers/" + worker.id, {
-        method: "PATCH",
-        body: { password: e.target.password.value },
+      var f = e.target;
+      withSpinner(f.querySelector('button[type="submit"]'), "Resetting…", function () {
+        return api("/api/admin/workers/" + worker.id, {
+          method: "PATCH",
+          body: { password: f.password.value },
+        });
       })
         .then(function () {
           closeModal();
@@ -1844,16 +1863,18 @@
             el.hidden = false;
             return;
           }
-          api("/api/admin/receipts", {
-            method: "POST",
-            body: {
-              buyer_type: f.buyer_type.value,
-              buyer_name: f.buyer_name.value,
-              buyer_phone: f.buyer_phone.value,
-              buyer_address: f.buyer_address.value,
-              notes: f.notes.value,
-              items: items,
-            },
+          withSpinner(f.querySelector('button[type="submit"]'), "Creating…", function () {
+            return api("/api/admin/receipts", {
+              method: "POST",
+              body: {
+                buyer_type: f.buyer_type.value,
+                buyer_name: f.buyer_name.value,
+                buyer_phone: f.buyer_phone.value,
+                buyer_address: f.buyer_address.value,
+                notes: f.notes.value,
+                items: items,
+              },
+            });
           })
             .then(function (res) {
               closeModal();
@@ -1954,12 +1975,14 @@
           var approveBtn = e.target.closest("[data-approve]");
           var rejectBtn = e.target.closest("[data-reject]");
           if (approveBtn) {
-            api(
-              "/api/admin/products/" +
-                approveBtn.getAttribute("data-approve") +
-                "/approve",
-              { method: "POST" },
-            )
+            withSpinner(approveBtn, "Approving…", function () {
+              return api(
+                "/api/admin/products/" +
+                  approveBtn.getAttribute("data-approve") +
+                  "/approve",
+                { method: "POST" },
+              );
+            })
               .then(function () {
                 toast("Product approved — now live on the client site");
                 renderPending();
@@ -1975,12 +1998,14 @@
               )
             )
               return;
-            api(
-              "/api/admin/products/" +
-                rejectBtn.getAttribute("data-reject") +
-                "/reject",
-              { method: "POST" },
-            )
+            withSpinner(rejectBtn, "Rejecting…", function () {
+              return api(
+                "/api/admin/products/" +
+                  rejectBtn.getAttribute("data-reject") +
+                  "/reject",
+                { method: "POST" },
+              );
+            })
               .then(function () {
                 toast("Submission rejected");
                 renderPending();
@@ -2152,9 +2177,11 @@
           $("#branch-form", modal).addEventListener("submit", function (e) {
             e.preventDefault();
             var f = e.target;
-            api("/api/admin/branches", {
-              method: "POST",
-              body: { name: f.name.value, city: f.city.value },
+            withSpinner(f.querySelector('button[type="submit"]'), "Adding…", function () {
+              return api("/api/admin/branches", {
+                method: "POST",
+                body: { name: f.name.value, city: f.city.value },
+              });
             })
               .then(function () {
                 closeModal();
@@ -2173,8 +2200,10 @@
           var del = e.target.closest("[data-del-branch]");
           if (!del) return;
           if (!confirm("Delete this branch?")) return;
-          api("/api/admin/branches/" + del.getAttribute("data-del-branch"), {
-            method: "DELETE",
+          withSpinner(del, "Deleting…", function () {
+            return api("/api/admin/branches/" + del.getAttribute("data-del-branch"), {
+              method: "DELETE",
+            });
           })
             .then(function () {
               toast("Branch deleted");
@@ -2245,13 +2274,15 @@
           $("#category-form", modal).addEventListener("submit", function (e) {
             e.preventDefault();
             var f = e.target;
-            api("/api/admin/categories", {
-              method: "POST",
-              body: {
-                name_en: f.name_en.value,
-                name_fr: f.name_fr.value,
-                name_zh: f.name_zh.value,
-              },
+            withSpinner(f.querySelector('button[type="submit"]'), "Adding…", function () {
+              return api("/api/admin/categories", {
+                method: "POST",
+                body: {
+                  name_en: f.name_en.value,
+                  name_fr: f.name_fr.value,
+                  name_zh: f.name_zh.value,
+                },
+              });
             })
               .then(function () {
                 closeModal();
@@ -2270,8 +2301,10 @@
           var del = e.target.closest("[data-del-cat]");
           if (!del || del.disabled) return;
           if (!confirm("Delete this category?")) return;
-          api("/api/admin/categories/" + del.getAttribute("data-del-cat"), {
-            method: "DELETE",
+          withSpinner(del, "Deleting…", function () {
+            return api("/api/admin/categories/" + del.getAttribute("data-del-cat"), {
+              method: "DELETE",
+            });
           })
             .then(function () {
               toast("Category deleted");
@@ -2339,16 +2372,18 @@
         $("#settings-form").addEventListener("submit", function (e) {
           e.preventDefault();
           var f = e.target;
-          api("/api/admin/settings", {
-            method: "PUT",
-            body: {
-              phone: f.phone.value,
-              whatsapp: f.whatsapp.value,
-              email: f.email.value,
-              hours: f.hours.value,
-              address: f.address.value,
-              facebook: f.facebook.value,
-            },
+          withSpinner(f.querySelector('button[type="submit"]'), "Saving…", function () {
+            return api("/api/admin/settings", {
+              method: "PUT",
+              body: {
+                phone: f.phone.value,
+                whatsapp: f.whatsapp.value,
+                email: f.email.value,
+                hours: f.hours.value,
+                address: f.address.value,
+                facebook: f.facebook.value,
+              },
+            });
           })
             .then(function () {
               toast("Saved — client site contact info updated");
@@ -2361,9 +2396,11 @@
         $("#pwchange-form").addEventListener("submit", function (e) {
           e.preventDefault();
           var f = e.target;
-          api("/api/auth/change-password", {
-            method: "POST",
-            body: { current: f.current.value, next: f.next.value },
+          withSpinner(f.querySelector('button[type="submit"]'), "Changing…", function () {
+            return api("/api/auth/change-password", {
+              method: "POST",
+              body: { current: f.current.value, next: f.next.value },
+            });
           })
             .then(function () {
               f.reset();
@@ -2377,9 +2414,11 @@
         $("#username-form").addEventListener("submit", function (e) {
           e.preventDefault();
           var f = e.target;
-          api("/api/auth/change-username", {
-            method: "POST",
-            body: { username: f.username.value, password: f.password.value },
+          withSpinner(f.querySelector('button[type="submit"]'), "Changing…", function () {
+            return api("/api/auth/change-username", {
+              method: "POST",
+              body: { username: f.username.value, password: f.password.value },
+            });
           })
             .then(function (res) {
               f.reset();
