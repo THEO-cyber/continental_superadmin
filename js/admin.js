@@ -603,7 +603,7 @@
             ? products
                 .map(function (p) {
                   return (
-                    '<tr data-id="' +
+                    '<tr class="product-row" data-id="' +
                     p.id +
                     '">' +
                     '<td><img class="thumb" src="' +
@@ -625,8 +625,21 @@
                     priceRangeText(p) +
                     "</td>" +
                     '<td class="num' +
-                    (p.quantity <= LOW_STOCK ? " low-stock" : "") +
-                    '">' +
+                    (flaggedPartNumbers(p, "out").length
+                      ? " low-stock"
+                      : flaggedPartNumbers(p, "low").length
+                        ? " qty-warn"
+                        : "") +
+                    '"' +
+                    (flaggedPartNumbers(p, "out").length || flaggedPartNumbers(p, "low").length
+                      ? ' title="' +
+                        esc(
+                          flaggedPartNumbersText(p, "out") ||
+                            flaggedPartNumbersText(p, "low"),
+                        ) +
+                        ' — click the product for detail"'
+                      : "") +
+                    ">" +
                     p.quantity +
                     "</td>" +
                     '<td><label class="toggle"><input type="checkbox" data-action="publish"' +
@@ -699,35 +712,45 @@
 
         $("#view").onclick = function (e) {
           var btn = e.target.closest("[data-action]");
-          if (!btn) return;
-          var action = btn.getAttribute("data-action");
-          if (action === "add") return openProductModal(null, branches);
-          var row = btn.closest("tr[data-id]");
+          if (btn) {
+            var action = btn.getAttribute("data-action");
+            if (action === "add") return openProductModal(null, branches);
+            var actionRow = btn.closest("tr[data-id]");
+            if (!actionRow) return;
+            var actionId = actionRow.getAttribute("data-id");
+            var actionProduct = products.find(function (p) {
+              return p.id === actionId;
+            });
+            if (action === "edit") openProductModal(actionProduct, branches);
+            if (action === "restock") openRestockModal(actionProduct);
+            if (action === "delete") deleteProduct(actionProduct, btn);
+            if (action === "publish") {
+              api("/api/admin/products/" + actionId, {
+                method: "PUT",
+                body: { published: e.target.checked ? 1 : 0 },
+              })
+                .then(function () {
+                  toast(
+                    e.target.checked
+                      ? "Product is now visible on the client site"
+                      : "Product hidden from the client site",
+                  );
+                })
+                .catch(function (err) {
+                  toast(err.message, true);
+                  renderProducts();
+                });
+            }
+            return;
+          }
+          // No action button clicked -- clicking the row itself opens full detail.
+          var row = e.target.closest("tr[data-id]");
           if (!row) return;
           var id = row.getAttribute("data-id");
           var product = products.find(function (p) {
             return p.id === id;
           });
-          if (action === "edit") openProductModal(product, branches);
-          if (action === "restock") openRestockModal(product);
-          if (action === "delete") deleteProduct(product, btn);
-          if (action === "publish") {
-            api("/api/admin/products/" + id, {
-              method: "PUT",
-              body: { published: e.target.checked ? 1 : 0 },
-            })
-              .then(function () {
-                toast(
-                  e.target.checked
-                    ? "Product is now visible on the client site"
-                    : "Product hidden from the client site",
-                );
-              })
-              .catch(function (err) {
-                toast(err.message, true);
-                renderProducts();
-              });
-          }
+          if (product) openProductDetailModal(product, branches);
         };
       })
       .catch(showError);
@@ -1038,6 +1061,106 @@
         .catch(function (err) {
           toast(err.message, true);
         });
+    });
+  }
+
+  function openProductDetailModal(product, branches) {
+    var modal = openModal(
+      "<h2>" +
+        esc(product.name_en) +
+        "</h2>" +
+        '<div class="pending-top">' +
+        '<img class="thumb-lg" src="' +
+        esc(product.image || "/assets/img/part-placeholder.svg") +
+        '" alt="">' +
+        '<div class="pending-info">' +
+        '<p class="cell-muted">' +
+        esc(CATEGORIES[product.category] || product.category) +
+        (product.brand ? " · " + esc(product.brand) : "") +
+        "</p>" +
+        '<div class="pending-meta">' +
+        "<span><b>Status:</b> " +
+        (product.status === "pending" ? "Pending approval" : "Approved") +
+        "</span>" +
+        "<span><b>Visible on client site:</b> " +
+        (product.published ? "Yes" : "No") +
+        "</span>" +
+        "<span><b>Branch:</b> " +
+        esc(product.branch_name) +
+        "</span>" +
+        "<span><b>Total stock:</b> " +
+        product.quantity +
+        "</span>" +
+        "<span><b>Added by:</b> " +
+        esc(product.created_by || "—") +
+        "</span>" +
+        "<span><b>Added:</b> " +
+        esc(product.created_at) +
+        "</span>" +
+        "<span><b>Updated:</b> " +
+        esc(product.updated_at) +
+        "</span>" +
+        "</div>" +
+        "</div>" +
+        "</div>" +
+        '<div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Part Number</th><th class="num">Quantity</th><th class="num">Price</th></tr></thead><tbody>' +
+        (product.part_numbers || [])
+          .map(function (pn) {
+            var qtyCls = pn.quantity === 0 ? "low-stock" : pn.quantity <= LOW_STOCK ? "qty-warn" : "";
+            return (
+              "<tr><td>" +
+              esc(pn.part_number) +
+              (pn.quantity === 0
+                ? ' <span class="badge badge-off">out of stock</span>'
+                : pn.quantity <= LOW_STOCK
+                  ? ' <span class="badge" style="background:#fdf3e3;color:var(--amber-dark)">low stock</span>'
+                  : "") +
+              '</td><td class="num ' +
+              qtyCls +
+              '">' +
+              pn.quantity +
+              '</td><td class="num">' +
+              money(pn.price) +
+              "</td></tr>"
+            );
+          })
+          .join("") +
+        "</tbody></table></div>" +
+        [
+          ["English", product.name_en, product.desc_en],
+          ["Français", product.name_fr, product.desc_fr],
+          ["中文", product.name_zh, product.desc_zh],
+        ]
+          .filter(function (l) {
+            return l[1] || l[2];
+          })
+          .map(function (l) {
+            return (
+              '<fieldset class="lang-set" style="margin-top:1rem"><legend>' +
+              l[0] +
+              "</legend>" +
+              (l[1] ? '<p class="cell-strong">' + esc(l[1]) + "</p>" : "") +
+              (l[2]
+                ? '<p class="cell-muted" style="white-space:pre-wrap">' + esc(l[2]) + "</p>"
+                : "") +
+              "</fieldset>"
+            );
+          })
+          .join("") +
+        '<div class="modal-actions" style="margin-top:1rem">' +
+        '<button type="button" class="btn btn-outline" id="detail-close">Close</button>' +
+        '<button type="button" class="btn btn-outline" id="detail-restock">Restock</button>' +
+        '<button type="button" class="btn btn-primary" id="detail-edit">Edit</button>' +
+        "</div>",
+    );
+    $("#detail-close", modal).addEventListener("click", closeModal);
+    $("#detail-restock", modal).addEventListener("click", function () {
+      closeModal();
+      openRestockModal(product);
+    });
+    $("#detail-edit", modal).addEventListener("click", function () {
+      closeModal();
+      openProductModal(product, branches);
     });
   }
 
@@ -2154,7 +2277,7 @@
           '<div class="panel"><h2>Out of stock (' +
           out.length +
           ')</h2><div class="table-wrap"><table>' +
-          '<thead><tr><th></th><th>Product</th><th>Branch</th><th>Category</th><th class="num">Price</th><th>Restock</th></tr></thead><tbody>' +
+          '<thead><tr><th></th><th>Product</th><th>Part number(s) out</th><th>Branch</th><th>Category</th><th>Restock</th></tr></thead><tbody>' +
           (out.length
             ? out
                 .map(function (p) {
@@ -2168,28 +2291,11 @@
           " left (" +
           low.length +
           ')</h2><div class="table-wrap"><table>' +
-          '<thead><tr><th></th><th>Product</th><th>Branch</th><th class="num">Quantity left</th><th>Restock</th></tr></thead><tbody>' +
+          '<thead><tr><th></th><th>Product</th><th>Part number(s) low</th><th>Branch</th><th>Restock</th></tr></thead><tbody>' +
           (low.length
             ? low
                 .map(function (p) {
-                  return (
-                    '<tr data-id="' +
-                    p.id +
-                    '"><td><img class="thumb" src="' +
-                    esc(p.image || "/assets/img/part-placeholder.svg") +
-                    '" alt=""></td>' +
-                    '<td class="cell-strong">' +
-                    esc(p.name_en) +
-                    "</td><td>" +
-                    esc(p.branch_name) +
-                    "</td>" +
-                    '<td class="num low-stock">' +
-                    p.quantity +
-                    "</td>" +
-                    '<td><button class="btn btn-outline btn-xs" data-restock="' +
-                    p.id +
-                    '">Restock</button></td></tr>'
-                  );
+                  return lowStockRow(p);
                 })
                 .join("")
             : '<tr><td colspan="5" class="table-empty">Nothing low on stock.</td></tr>') +
@@ -2210,6 +2316,24 @@
       .catch(showError);
   }
 
+  // A product can have several part numbers; only some of them may actually
+  // be the ones that are out/low, so the out-of-stock and low-stock views
+  // name the specific part number(s) at fault rather than just the product
+  // — the aggregate total alone can hide a genuinely empty part number
+  // behind others that still have stock.
+  function flaggedPartNumbers(p, kind) {
+    return (p.part_numbers || []).filter(function (pn) {
+      return kind === "out" ? pn.quantity === 0 : pn.quantity > 0 && pn.quantity <= LOW_STOCK;
+    });
+  }
+  function flaggedPartNumbersText(p, kind) {
+    return flaggedPartNumbers(p, kind)
+      .map(function (pn) {
+        return pn.part_number + " (" + pn.quantity + ")";
+      })
+      .join(", ");
+  }
+
   function outOfStockRow(p) {
     return (
       '<tr data-id="' +
@@ -2219,14 +2343,33 @@
       '" alt=""></td>' +
       '<td class="cell-strong">' +
       esc(p.name_en) +
+      '</td><td class="cell-muted low-stock">' +
+      esc(flaggedPartNumbersText(p, "out")) +
       "</td><td>" +
       esc(p.branch_name) +
       "</td>" +
       '<td><span class="badge badge-cat">' +
       esc(CATEGORIES[p.category] || p.category) +
       "</span></td>" +
-      '<td class="num">' +
-      priceRangeText(p) +
+      '<td><button class="btn btn-outline btn-xs" data-restock="' +
+      p.id +
+      '">Restock</button></td></tr>'
+    );
+  }
+
+  function lowStockRow(p) {
+    return (
+      '<tr data-id="' +
+      p.id +
+      '"><td><img class="thumb" src="' +
+      esc(p.image || "/assets/img/part-placeholder.svg") +
+      '" alt=""></td>' +
+      '<td class="cell-strong">' +
+      esc(p.name_en) +
+      '</td><td class="cell-muted low-stock">' +
+      esc(flaggedPartNumbersText(p, "low")) +
+      "</td><td>" +
+      esc(p.branch_name) +
       "</td>" +
       '<td><button class="btn btn-outline btn-xs" data-restock="' +
       p.id +

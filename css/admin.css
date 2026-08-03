@@ -120,6 +120,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .cell-strong { font-weight: 700; color: var(--navy); }
 .cell-muted { color: var(--muted); font-size: .85rem; }
 .low-stock { color: var(--red); font-weight: 800; }
+.qty-warn { color: var(--amber-dark); font-weight: 800; }
 .table-empty { text-align: center; color: var(--muted); padding: 1.6rem !important; }
 
 /* ---------- badges / chips ---------- */
