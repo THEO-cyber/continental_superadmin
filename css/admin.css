@@ -234,6 +234,9 @@ fieldset.lang-set legend { font-size: .8rem; font-weight: 800; color: var(--navy
 .receipt-item-row {
   display: grid; grid-template-columns: 1fr 70px 110px 90px 32px; gap: .5rem; align-items: center; margin-bottom: .5rem;
 }
+.part-number-row {
+  display: grid; grid-template-columns: 1fr 100px 32px; gap: .5rem; align-items: center; margin-bottom: .5rem;
+}
 .ri-name-wrap { position: relative; }
 .ri-name-wrap input { width: 100%; }
 .ri-suggest {
@@ -291,6 +294,7 @@ fieldset.lang-set legend { font-size: .8rem; font-weight: 800; color: var(--navy
 
 @media (max-width: 640px) {
   .receipt-item-row { grid-template-columns: 1fr; gap: .35rem; background: var(--bg); padding: .7rem; border-radius: 8px; margin-bottom: .7rem; }
+  .part-number-row { grid-template-columns: 1fr; gap: .35rem; background: var(--bg); padding: .7rem; border-radius: 8px; margin-bottom: .7rem; }
   .ri-total { text-align: left; }
   .date-nav { flex-wrap: wrap; justify-content: center; }
   /* One field per row, like the Change password section below it — auto-fit's
