@@ -235,7 +235,7 @@ fieldset.lang-set legend { font-size: .8rem; font-weight: 800; color: var(--navy
   display: grid; grid-template-columns: 1fr 70px 110px 90px 32px; gap: .5rem; align-items: center; margin-bottom: .5rem;
 }
 .part-number-row {
-  display: grid; grid-template-columns: 1fr 100px 32px; gap: .5rem; align-items: center; margin-bottom: .5rem;
+  display: grid; grid-template-columns: 1fr 90px 110px 32px; gap: .5rem; align-items: center; margin-bottom: .5rem;
 }
 .ri-name-wrap { position: relative; }
 .ri-name-wrap input { width: 100%; }

@@ -54,6 +54,12 @@
       })
       .join(", ");
   }
+  function priceRangeText(p) {
+    if (p.price_min == null) return "";
+    return p.price_min === p.price_max
+      ? money(p.price_min)
+      : money(p.price_min) + " – " + money(p.price_max);
+  }
   function todayStr() {
     var d = new Date();
     return (
@@ -616,7 +622,7 @@
                       ? '<td class="cell-muted">' + esc(p.branch_name) + "</td>"
                       : "") +
                     '<td class="num cell-strong">' +
-                    money(p.price) +
+                    priceRangeText(p) +
                     "</td>" +
                     '<td class="num' +
                     (p.quantity <= LOW_STOCK ? " low-stock" : "") +
@@ -799,10 +805,7 @@
               .join("") +
             "</select></label>"
           : "") +
-        '<label>Price (FCFA) *<input name="price" type="number" min="0" step="1" required value="' +
-        (product ? product.price : "") +
-        '"><span class="form-hint">Only visible to you and workers. never on the client site.</span></label>' +
-        '<div class="form-col"><span>Part Numbers *</span><div id="part-number-rows"></div>' +
+        '<div class="form-col"><span>Part Numbers, Quantity &amp; Price (FCFA) *</span><span class="form-hint">Price is only visible to you and workers, never on the client site. Different part numbers can have different prices.</span><div id="part-number-rows"></div>' +
         '<button type="button" class="btn btn-outline btn-xs" id="add-part-number" style="margin-top:.5rem;width:fit-content">＋ Add part number</button></div>' +
         '<div class="form-row">' +
         '<label>Photo<input name="image" type="file" accept="image/jpeg,image/png,image/webp"><span class="form-hint">JPG, PNG or WebP formats. max 5 MB.</span></label>' +
@@ -832,7 +835,7 @@
     });
 
     var pnWrap = $("#part-number-rows", modal);
-    function addPartNumberRow(partNumber, quantity) {
+    function addPartNumberRow(partNumber, quantity, price) {
       var row = document.createElement("div");
       row.className = "part-number-row";
       row.innerHTML =
@@ -842,6 +845,9 @@
         '<input type="number" class="pn-quantity" min="0" step="1" placeholder="Qty" value="' +
         (quantity != null ? quantity : 0) +
         '" required>' +
+        '<input type="number" class="pn-price" min="0" step="1" placeholder="Price" value="' +
+        (price != null ? price : "") +
+        '" required>' +
         '<button type="button" class="btn btn-outline btn-xs" data-remove-pn>✕</button>';
       row.querySelector("[data-remove-pn]").addEventListener("click", function () {
         if (pnWrap.children.length > 1) row.remove();
@@ -850,13 +856,13 @@
     }
     if (isEdit && product.part_numbers && product.part_numbers.length) {
       product.part_numbers.forEach(function (pn) {
-        addPartNumberRow(pn.part_number, pn.quantity);
+        addPartNumberRow(pn.part_number, pn.quantity, pn.price);
       });
     } else {
-      addPartNumberRow("", 0);
+      addPartNumberRow("", 0, "");
     }
     $("#add-part-number", modal).addEventListener("click", function () {
-      addPartNumberRow("", 0);
+      addPartNumberRow("", 0, "");
     });
 
     $("#product-form", modal).addEventListener("submit", function (e) {
@@ -868,6 +874,7 @@
           return {
             part_number: row.querySelector(".pn-number").value.trim(),
             quantity: Number(row.querySelector(".pn-quantity").value) || 0,
+            price: Number(row.querySelector(".pn-price").value) || 0,
           };
         })
         .filter(function (pn) {
@@ -898,7 +905,6 @@
           ].forEach(function (k) {
             form.append(k, f[k].value);
           });
-          form.append("price", f.price.value);
           form.append("part_numbers", JSON.stringify(partNumbers));
           form.append("published", f.published.checked ? "1" : "0");
           if (f.branch_id) form.append("branch_id", f.branch_id.value);
@@ -1897,7 +1903,7 @@
                   '<div class="ri-suggest-item" data-id="' +
                   p.id +
                   '" data-price="' +
-                  p.price +
+                  ((p.part_numbers && p.part_numbers[0] && p.part_numbers[0].price) || 0) +
                   '" data-name="' +
                   esc(p.name_en) +
                   '" data-sku="' +
@@ -2047,7 +2053,7 @@
                     "</p>" +
                     '<div class="pending-meta">' +
                     "<span><b>Price:</b> " +
-                    money(p.price) +
+                    priceRangeText(p) +
                     "</span>" +
                     "<span><b>Quantity:</b> " +
                     p.quantity +
@@ -2220,7 +2226,7 @@
       esc(CATEGORIES[p.category] || p.category) +
       "</span></td>" +
       '<td class="num">' +
-      money(p.price) +
+      priceRangeText(p) +
       "</td>" +
       '<td><button class="btn btn-outline btn-xs" data-restock="' +
       p.id +
