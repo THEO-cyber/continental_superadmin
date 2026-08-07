@@ -1,7 +1,7 @@
 {
   "name": "Continental Superadmin",
   "short_name": "CT Admin",
-  "description": "Inventory, sales reports and site control — Continental Auto Parts.",
+  "description": "Inventory, sales reports and site control — Continental Automobile.",
   "id": "/",
   "start_url": "/",
   "scope": "/",

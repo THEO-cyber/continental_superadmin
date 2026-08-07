@@ -1,7 +1,7 @@
 {
   "name": "continental-superadmin",
   "private": true,
-  "description": "Continental Auto Parts — superadmin dashboard (static site + a tiny Netlify Function for runtime config)",
+  "description": "Continental Automobile — superadmin dashboard (static site + a tiny Netlify Function for runtime config)",
   "engines": {
     "node": ">=20"
   },
